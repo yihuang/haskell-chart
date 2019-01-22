@@ -38,12 +38,14 @@ import Data.Traversable
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Builder as B
 import qualified Data.Text as T
 
 import Control.Lens(makeLenses)
 import Control.Monad.Operational
 import Control.Monad.State.Lazy
 
+import System.IO (IOMode (..), withFile)
 import Diagrams.Core.Transform ( Transformation(..) )
 import Diagrams.Prelude
   ( Diagram
@@ -126,7 +128,8 @@ cBackendToFile fo cb path = do
     EPS -> do
       let (d, a) = runBackend env cb
           opts = DEPS.PostscriptOptions path (D2.dims2D w h) DEPS.EPS
-      D.renderDia DEPS.Postscript opts d
+          b = D.renderDia DEPS.Postscript opts d
+      withFile path WriteMode $ \h -> B.hPutBuilder h b
       return a
     SVG -> do
       let (d, a) = runBackend env cb
@@ -567,12 +570,6 @@ fontStyleToTextOpts env =
       , F.textWidth = 1
       , F.textHeight = scaledH -- _font_size fs
       }
-
-fontFromName :: (Read n, RealFloat n) => String -> F.PreparedFont n
-fontFromName name = case name of
-  "serif" -> F.lin
-  "monospace" -> F.bit
-  _ -> F.lin
 
 -- | Convert line caps.
 convertLineCap :: LineCap -> D.LineCap
